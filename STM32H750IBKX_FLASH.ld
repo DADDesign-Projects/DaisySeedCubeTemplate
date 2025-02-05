@@ -216,14 +216,14 @@ SECTIONS
     . = ALIGN(4);
   } >RAM_D2
  /*  Unitialized QFLASH section into "QFLASH" QFLASH type memory [MMT section] */
- .QFLASH_Section :
+ .QFLASH_Section (NOLOAD):
   {
     . = ALIGN(4);
     KEEP (*(.QFLASH_Section))
     . = ALIGN(4);
   } >QFLASH
  /*  Unitialized SDRAM section into "SDRAM" SDRAM type memory [MMT section] */
- .SDRAM_Section :
+ .SDRAM_Section (NOLOAD):
   {
     . = ALIGN(4);
     KEEP (*(.SDRAM_Section))
