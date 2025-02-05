@@ -1,0 +1,20 @@
+../Core/Inc/cHwQSPI.h:20:5:Dad::cHwQSPI::cHwQSPI()	16	static
+../Core/Inc/cHwQSPI.h:21:13:Dad::cHwQSPI::~cHwQSPI()	16	static
+../Core/Inc/cHwQSPI.h:21:13:virtual Dad::cHwQSPI::~cHwQSPI()	16	static
+../Core/Inc/cIS25LPxxx.h:123:2:Dad::cIS25LPxxx::cIS25LPxxx()	16	static
+../Core/Inc/cIS25LPxxx.h:124:10:Dad::cIS25LPxxx::~cIS25LPxxx()	16	static
+../Core/Inc/cIS25LPxxx.h:124:10:virtual Dad::cIS25LPxxx::~cIS25LPxxx()	16	static
+../Core/Src/main.cpp:78:6:void AudioCallback(AudioBuffer*, AudioBuffer*)	24	static
+../Core/Src/main.cpp:94:5:int main()	16	static
+../Core/Src/main.cpp:157:6:void SystemClock_Config()	120	static
+../Core/Src/main.cpp:215:6:void PeriphCommonClock_Config()	200	static
+../Core/Src/main.cpp:242:13:void MX_QUADSPI_Init()	8	static
+../Core/Src/main.cpp:277:13:void MX_SAI1_Init()	8	static
+../Core/Src/main.cpp:324:13:void MX_DMA_Init()	16	static
+../Core/Src/main.cpp:341:13:void MX_FMC_Init()	56	static
+../Core/Src/main.cpp:462:13:void MX_GPIO_Init()	64	static
+../Core/Src/main.cpp:509:6:void MPU_Config()	24	static
+../Core/Src/main.cpp:575:6:void Error_Handler()	4	static,ignoring_inline_asm
+../Core/Src/main.cpp:584:1:void __static_initialization_and_destruction_0(int, int)	16	static
+../Core/Src/main.cpp:584:1:cpp)	8	static
+../Core/Src/main.cpp:584:1:cpp)	8	static
