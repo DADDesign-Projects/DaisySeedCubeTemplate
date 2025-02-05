@@ -137,7 +137,6 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  GPIO_PinState LedState = GPIO_PIN_RESET;
   while (1)
   {
     /* USER CODE END WHILE */
