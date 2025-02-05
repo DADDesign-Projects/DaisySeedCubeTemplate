@@ -1,7 +1,0 @@
-../Core/Src/Audio.cpp:40:6:void ConvertToAudioBuffer(int32_t*, AudioBuffer*)	2
-../Core/Src/Audio.cpp:50:6:void ConvertFromAudioBuffer(AudioBuffer*, int32_t*)	2
-../Core/Src/Audio.cpp:60:6:void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef*)	1
-../Core/Src/Audio.cpp:70:6:void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef*)	1
-../Core/Src/Audio.cpp:80:6:void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef*)	1
-../Core/Src/Audio.cpp:94:6:void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef*)	1
-../Core/Src/Audio.cpp:107:19:HAL_StatusTypeDef StartAudio()	2
