@@ -26,18 +26,18 @@ extern SAI_HandleTypeDef hsai_BlockB1;
 extern void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut);
 
 // Audio Buffer
-AudioBuffer In[AUDIO_BUFFER_SIZE] = {0};
-AudioBuffer Out1[AUDIO_BUFFER_SIZE] = {0};
-AudioBuffer Out2[AUDIO_BUFFER_SIZE] = {0};
+NO_CACHE_RAM AudioBuffer In[AUDIO_BUFFER_SIZE] = {0};
+NO_CACHE_RAM AudioBuffer Out1[AUDIO_BUFFER_SIZE] = {0};
+NO_CACHE_RAM AudioBuffer Out2[AUDIO_BUFFER_SIZE] = {0};
 
-AudioBuffer* pOut=Out1;
-int32_t rxBuffer[SAI_BUFFER_SIZE] = {0};
-int32_t txBuffer[SAI_BUFFER_SIZE] = {0};
+NO_CACHE_RAM AudioBuffer* pOut=Out1;
+NO_CACHE_RAM int32_t rxBuffer[SAI_BUFFER_SIZE] = {0};
+NO_CACHE_RAM int32_t txBuffer[SAI_BUFFER_SIZE] = {0};
 
 // ------------------------------------------------------------------------
 // Convert int32_t buffer to float AudioBuffer
 // ------------------------------------------------------------------------
-void ConvertToAudioBuffer( int32_t* intBuf, AudioBuffer* floatBuf) {
+ITCM void ConvertToAudioBuffer( int32_t* intBuf, AudioBuffer* floatBuf) {
     for (size_t i = 0; i < AUDIO_BUFFER_SIZE; i++) {
         floatBuf[i].Left = int32ToFloat(intBuf[i * 2]);
         floatBuf[i].Right = int32ToFloat(intBuf[i * 2 + 1]);
@@ -47,7 +47,7 @@ void ConvertToAudioBuffer( int32_t* intBuf, AudioBuffer* floatBuf) {
 // ------------------------------------------------------------------------
 // Convert float AudioBuffer to int32_t buffer
 // ------------------------------------------------------------------------
-void ConvertFromAudioBuffer(AudioBuffer* floatBuf, int32_t* intBuf) {
+ITCM void ConvertFromAudioBuffer(AudioBuffer* floatBuf, int32_t* intBuf) {
     for (size_t i = 0; i < AUDIO_BUFFER_SIZE; i++) {
         intBuf[i * 2] = floatToInt32(floatBuf[i].Left);
         intBuf[i * 2 + 1] = floatToInt32(floatBuf[i].Right);
@@ -57,7 +57,7 @@ void ConvertFromAudioBuffer(AudioBuffer* floatBuf, int32_t* intBuf) {
 // ------------------------------------------------------------------------
 //  Callback for transmission complete
 // ------------------------------------------------------------------------
-void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai) {
+ITCM void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai) {
     __disable_irq();
     // Convert audio buffer from float to int32_t format and store in the second half of txBuffer
     ConvertFromAudioBuffer(pOut, &txBuffer[SAI_HALF_BUFFER_SIZE]);
@@ -67,7 +67,7 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai) {
 // ------------------------------------------------------------------------
 //  Callback for half transmission complete
 // ------------------------------------------------------------------------
-void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai) {
+ITCM void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai) {
     __disable_irq();
     // Convert audio buffer from float to int32_t format and store in the first half of txBuffer
     ConvertFromAudioBuffer(pOut, txBuffer);
@@ -77,7 +77,7 @@ void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai) {
 // ------------------------------------------------------------------------
 //  Callback for reception complete
 // ------------------------------------------------------------------------
-void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
+ITCM void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
 
 	// Convert received int32_t buffer to float format for processing
     ConvertToAudioBuffer(&rxBuffer[SAI_HALF_BUFFER_SIZE], In);
@@ -91,7 +91,7 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
 // ------------------------------------------------------------------------
 //  Callback for half reception complete
 // ------------------------------------------------------------------------
-void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai) {
+ITCM void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai) {
 	// Convert received int32_t buffer to float format for processing
     ConvertToAudioBuffer(rxBuffer, In);
     // Process audio data

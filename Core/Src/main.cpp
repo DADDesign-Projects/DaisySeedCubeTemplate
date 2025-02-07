@@ -75,7 +75,7 @@ Dad::cIS25LPxxx __Flash;
 
 // ------------------------------------------------------------------------
 // AudioCallback
-void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut){
+ITCM void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut){
 	for (size_t i = 0; i < AUDIO_BUFFER_SIZE; i++)
 	{
 		pOut->Right = pIn->Right;
@@ -83,6 +83,29 @@ void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut){
 		pOut++;
 		pIn++;
 	}
+}
+
+// ------------------------------------------------------------------------
+// Function to copy code from Flash to ITCM RAM at startup
+// This ensures that critical code runs from ITCM for better performance.
+//
+// Any critical function that needs to run from ITCM must be preceded by the ITCM macro.
+// Example usage:
+//     ITCM void CriticalFunction() {
+//         // Time-sensitive code
+//     }
+// ------------------------------------------------------------------------
+
+extern uint32_t __sITCM, __eITCM, __lITCM;  // Linker symbols for ITCM section
+
+void Copy_ITCM_Code(void) {
+    uint32_t *pSrc = &__lITCM;  // Source address in Flash (load address)
+    uint32_t *pDest = &__sITCM; // Destination address in ITCM RAM (start of ITCM)
+
+    // Copy the code section from Flash to ITCM RAM
+    while (pDest < &__eITCM) {
+        *pDest++ = *pSrc++;
+    }
 }
 
 /* USER CODE END 0 */
@@ -95,7 +118,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+	Copy_ITCM_Code();
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
@@ -131,7 +154,15 @@ int main(void)
   MX_SAI1_Init();
   /* USER CODE BEGIN 2 */
   __Flash.Init(&hqspi);
+
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
+
+  /* Enable D-Cache---------------------------------------------------------*/
+  SCB_EnableDCache();
+
   StartAudio();
+
 
   /* USER CODE END 2 */
 
@@ -544,11 +575,10 @@ void MPU_Config(void)
   /** Initializes and configures the Region and the memory to be protected
   */
   MPU_InitStruct.Number = MPU_REGION_NUMBER2;
-  MPU_InitStruct.BaseAddress = 0x90000000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_8MB;
+  MPU_InitStruct.BaseAddress = 0x24070800;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_2KB;
   MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
-  MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO_URO;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
   MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
 
@@ -557,6 +587,48 @@ void MPU_Config(void)
   /** Initializes and configures the Region and the memory to be protected
   */
   MPU_InitStruct.Number = MPU_REGION_NUMBER3;
+  MPU_InitStruct.BaseAddress = 0x24071000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_4KB;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Number = MPU_REGION_NUMBER4;
+  MPU_InitStruct.BaseAddress = 0x24072000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_8KB;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Number = MPU_REGION_NUMBER5;
+  MPU_InitStruct.BaseAddress = 0x24074000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_16KB;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Number = MPU_REGION_NUMBER6;
+  MPU_InitStruct.BaseAddress = 0x24078000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_32KB;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Number = MPU_REGION_NUMBER7;
+  MPU_InitStruct.BaseAddress = 0x90000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_8MB;
+  MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO_URO;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Number = MPU_REGION_NUMBER8;
   MPU_InitStruct.BaseAddress = 0xC0000000;
   MPU_InitStruct.Size = MPU_REGION_SIZE_64MB;
   MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;

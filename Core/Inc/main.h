@@ -64,6 +64,12 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+/* Sections ---------------------------------------------------------*/
+#define SDRAM_SECTION __attribute__((section(".SDRAM_Section")))
+#define QFLASH_SECTION __attribute__((section(".QFLASH_Section")))
+#define NO_CACHE_RAM __attribute__((section(".NO_CACHE_RAM_Section")))
+#define ITCM __attribute__((section(".ITCMRAM_Section")))
+
 /* Audio ---------------------------------------------------------*/
 #define AUDIO_BUFFER_SIZE 4
 struct AudioBuffer{
