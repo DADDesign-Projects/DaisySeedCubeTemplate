@@ -30,7 +30,7 @@ NO_CACHE_RAM AudioBuffer In[AUDIO_BUFFER_SIZE] = {0};
 NO_CACHE_RAM AudioBuffer Out1[AUDIO_BUFFER_SIZE] = {0};
 NO_CACHE_RAM AudioBuffer Out2[AUDIO_BUFFER_SIZE] = {0};
 
-NO_CACHE_RAM AudioBuffer* pOut;
+NO_CACHE_RAM AudioBuffer* pOut=Out1;
 NO_CACHE_RAM int32_t rxBuffer[SAI_BUFFER_SIZE] = {0};
 NO_CACHE_RAM int32_t txBuffer[SAI_BUFFER_SIZE] = {0};
 
@@ -106,21 +106,6 @@ ITCM void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai) {
 // ------------------------------------------------------------------------
 HAL_StatusTypeDef StartAudio(){
 	HAL_StatusTypeDef Result;
-
-	// Buffers initialization
-	pOut=Out1;
-	for(uint16_t Index = 0; Index < AUDIO_BUFFER_SIZE; Index++ ){
-		In[Index].Left = 0.0f;
-		In[Index].Right = 0.0f;
-		Out1[Index].Left = 0.0f;
-		Out1[Index].Right = 0.0f;
-		Out2[Index].Left = 0.0f;
-		Out2[Index].Right = 0.0f;
-	}
-	for(uint16_t Index = 0; Index < SAI_BUFFER_SIZE; Index++ ){
-		rxBuffer[Index] = 0;
-		txBuffer[Index] = 0;
-	}
 
 	// Reset CODEC
 	HAL_GPIO_WritePin(RESET_CODEC_GPIO_Port, RESET_CODEC_Pin, GPIO_PIN_SET);
