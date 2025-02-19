@@ -156,7 +156,7 @@ protected:
     // without requiring explicit read commands.
     //
     // Returns:
-    //   HAL status indicating success or failure of the configuration.
+    //   HAL_OK if successful, HAL_ERROR if the command fails.
     // ------------------------------------------------------------------------
     inline HAL_StatusTypeDef SwapModeMemoryMap() {
     	QSPI_MemoryMappedTypeDef cfg;
@@ -174,19 +174,13 @@ protected:
     }
 
     // ------------------------------------------------------------------------
-    // Function to swap the memory access mode
-    // This function returns the previous memory access mode before switching.
-    // If the mode is already set, no changes are made.
-    //
-    // Parameters:
-    //   Mode - The desired memory access mode (Direct or Indirect)
+    // Function to set the memory access mode to Indirect Mode
     //
     // Returns:
-    //   The previous memory access mode
+    //   HAL_OK if successful, HAL_ERROR if the command fails.
     //
-    inline HAL_StatusTypeDef SwapModeIndirect(){
+    inline HAL_StatusTypeDef setIndirectMode(){
 
-        // Store the current memory access mode before changing it
         return HAL_QSPI_Abort(m_phqspi);      		// Abort any ongoing QSPI operation
      }
 

@@ -146,6 +146,14 @@ public:
 	HAL_StatusTypeDef MemoryMap();
 
 	// ------------------------------------------------------------------------
+	// Configures the QSPI memory in indirect Mode access
+	//
+	// Returns:
+	//   HAL_OK if successful, otherwise an error status.
+	// ------------------------------------------------------------------------
+	HAL_StatusTypeDef SwapModeIndirect();
+
+	// ------------------------------------------------------------------------
 	// Performs a fast read operation from the QSPI memory.
 	// Parameters:
 	//  - pData: Pointer to the data buffer where the read data will be stored.

@@ -144,15 +144,32 @@ HAL_StatusTypeDef cIS25LPxxx::Init(QSPI_HandleTypeDef* phqspi, uint32_t MemoryAd
 // without requiring explicit read commands.
 //
 // Returns:
-//   HAL status indicating success or failure of the configuration.
+//   HAL_OK if initialization is successful, otherwise an error status.
 // ------------------------------------------------------------------------
-inline HAL_StatusTypeDef cIS25LPxxx::MemoryMap() {
+HAL_StatusTypeDef cIS25LPxxx::MemoryMap() {
 	HAL_StatusTypeDef Result;
 
     // Enable memory-mapped mode using the configured settings.
     Result = SwapModeMemoryMap();
     WaitNoBusy();
     return Result;
+}
+
+// ------------------------------------------------------------------------
+// Configures the QSPI memory in indirect Mode access
+//
+// Returns:
+//   HAL_OK if successful, otherwise an error status.
+// ------------------------------------------------------------------------
+
+HAL_StatusTypeDef cIS25LPxxx::SwapModeIndirect(){
+	HAL_StatusTypeDef Result;
+
+    // Enable memory-mapped mode using the configured settings.
+    Result = setIndirectMode();
+    WaitNoBusy();
+    return Result;
+
 }
 
 // ------------------------------------------------------------------------
