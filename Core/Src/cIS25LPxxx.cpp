@@ -11,7 +11,8 @@ namespace Dad {
 //****************************************************************************
 // Implementation of cW25Qxxx methods
 //
-
+#define VALID_ADDRESS(Adr)\
+	if((Adr < m_MemoryAddress) || (Adr > (m_MemoryAddress+IS25LP064A_Size))) return HAL_ERROR
 // ------------------------------------------------------------------------
 // Initializes the QSPI interface.
 //
@@ -44,6 +45,22 @@ HAL_StatusTypeDef cIS25LPxxx::Init(QSPI_HandleTypeDef* phqspi, uint32_t MemoryAd
     m_Command.DdrMode = QSPI_DDR_MODE_DISABLE;
     m_Command.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
     m_Command.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+
+    // General command structure for executing QSPI commands
+    m_CommandAddress.Instruction = 0;
+    m_CommandAddress.NbData = 0;
+    m_CommandAddress.Address = 0;
+    m_CommandAddress.AlternateBytes = 0;
+    m_CommandAddress.AddressSize = QSPI_ADDRESS_24_BITS;
+    m_CommandAddress.AlternateBytesSize = 0;
+    m_CommandAddress.DummyCycles = 0;
+    m_CommandAddress.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+    m_CommandAddress.AddressMode = QSPI_ADDRESS_1_LINE;
+    m_CommandAddress.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
+    m_CommandAddress.DataMode = QSPI_DATA_NONE;
+    m_CommandAddress.DdrMode = QSPI_DDR_MODE_DISABLE;
+    m_CommandAddress.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
+    m_CommandAddress.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
 
     // Configure the command for writing data
     m_CommandQuadWrite.Address = 0;
@@ -181,6 +198,7 @@ HAL_StatusTypeDef cIS25LPxxx::SwapModeIndirect(){
 // Returns:
 //  - HAL status
 HAL_StatusTypeDef cIS25LPxxx::FastRead(uint8_t* pData, uint32_t Address, uint32_t NbData){
+	VALID_ADDRESS(Address);
 	HAL_StatusTypeDef Result;
 	SwapModeIndirect();
 	Result = ReadQuadData(Address, pData, NbData);
@@ -194,20 +212,21 @@ HAL_StatusTypeDef cIS25LPxxx::FastRead(uint8_t* pData, uint32_t Address, uint32_
 // and ensuring the write operation completes before proceeding to the next page.
 // Parameters:
 //  - pData: Pointer to the data buffer containing the data to be written.
-//  - Adresse: Starting address in memory where the data will be written.
+//  - Addresse: Starting address in memory where the data will be written.
 //  - NbData: Number of bytes to write.
 // Returns:
 //  - HAL status indicating success or failure of the operation.
-HAL_StatusTypeDef cIS25LPxxx::FastWrite(uint8_t* pData, uint32_t Adresse, uint32_t NbData){
-    HAL_StatusTypeDef Result;
-    uint32_t Page_Adress;
+HAL_StatusTypeDef cIS25LPxxx::FastWrite(uint8_t* pData, uint32_t Address, uint32_t NbData){
+	VALID_ADDRESS(Address);
+	HAL_StatusTypeDef Result;
+    uint32_t Page_Address;
     uint32_t Page_Size;
 
     SwapModeIndirect();
 
     // Calculate the size of the first page to write.
-    Page_Adress = Adresse;
-    Page_Size = 0x100 - (Page_Adress & 0xFF);  // Size of the first partial page (256 bytes).
+    Page_Address = Address;
+    Page_Size = 0x100 - (Page_Address & 0xFF);  // Size of the first partial page (256 bytes).
     if (Page_Size > NbData) {
         Page_Size = NbData;  // Adjust size if less than the page size.
     }
@@ -219,7 +238,7 @@ HAL_StatusTypeDef cIS25LPxxx::FastWrite(uint8_t* pData, uint32_t Adresse, uint32
         }
 
         // Write the current page of data to memory.
-        if (HAL_OK != (Result = WriteQuadData(Page_Adress, pData, Page_Size))){
+        if (HAL_OK != (Result = WriteQuadData(Page_Address, pData, Page_Size))){
             return Result;  // Return if writing data failed.
         }
 
@@ -229,7 +248,7 @@ HAL_StatusTypeDef cIS25LPxxx::FastWrite(uint8_t* pData, uint32_t Adresse, uint32
         }
        // Move to the next chunk of data to write.
         pData += Page_Size;
-        Page_Adress += Page_Size;
+        Page_Address += Page_Size;
         NbData -= Page_Size;
 
         // Calculate the size of the next page to write.
@@ -251,7 +270,9 @@ HAL_StatusTypeDef cIS25LPxxx::FastWrite(uint8_t* pData, uint32_t Adresse, uint32
 //  - Adresse: Address in the sector to erase.
 // Returns:
 //  - HAL status
-HAL_StatusTypeDef cIS25LPxxx::EraseSector(uint32_t Adresse){
+HAL_StatusTypeDef cIS25LPxxx::EraseSector(uint32_t Address){
+	VALID_ADDRESS(Address);
+
 	HAL_StatusTypeDef Result;
     SwapModeIndirect();
 
@@ -261,8 +282,9 @@ HAL_StatusTypeDef cIS25LPxxx::EraseSector(uint32_t Adresse){
 	}
 
 	// Erase sector
-	uint32_t DataAdresse = (Adresse - m_MemoryAddress) & 0x00FFF000;
-	if(HAL_OK != (Result = CommandTXData(IS25CMD::CMD_SECTOR_ERASE, (uint8_t*)&DataAdresse, 3))){
+	uint32_t DataAdresse = (Address - m_MemoryAddress) & 0x00FFF000;
+
+	if(HAL_OK != (Result = CommandAddress(IS25CMD::CMD_SECTOR_ERASE, DataAdresse))){
 		return Result;
 	}
 
@@ -280,7 +302,8 @@ HAL_StatusTypeDef cIS25LPxxx::EraseSector(uint32_t Adresse){
 //  - Adresse: Address in the 32 KB block to erase.
 // Returns:
 //  - HAL status
-HAL_StatusTypeDef cIS25LPxxx::EraseBlock32(uint32_t Adresse){
+HAL_StatusTypeDef cIS25LPxxx::EraseBlock32(uint32_t Address){
+	VALID_ADDRESS(Address);
 	HAL_StatusTypeDef Result;
     SwapModeIndirect();
 
@@ -290,8 +313,9 @@ HAL_StatusTypeDef cIS25LPxxx::EraseBlock32(uint32_t Adresse){
 	}
 
 	// Erase sector
-	uint32_t DataAdresse = (Adresse - m_MemoryAddress) & 0x00FF8000;
-	if(HAL_OK != (Result = CommandTXData(IS25CMD::CMD_BLOCK_ERASE_32K, (uint8_t*)&DataAdresse, 3))){
+	uint32_t DataAdresse = (Address - m_MemoryAddress) & 0x00FF8000;
+
+	if(HAL_OK != (Result = CommandAddress(IS25CMD::CMD_BLOCK_ERASE_32K, DataAdresse))){
 		return Result;
 	}
 
@@ -309,7 +333,8 @@ HAL_StatusTypeDef cIS25LPxxx::EraseBlock32(uint32_t Adresse){
 //  - Adresse: Address in 64 KB block to erase.
 // Returns:
 //  - HAL status
-HAL_StatusTypeDef cIS25LPxxx::EraseBlock64(uint32_t Adresse){
+HAL_StatusTypeDef cIS25LPxxx::EraseBlock64(uint32_t Address){
+	VALID_ADDRESS(Address);
 	HAL_StatusTypeDef Result;
 
     SwapModeIndirect();
@@ -320,8 +345,9 @@ HAL_StatusTypeDef cIS25LPxxx::EraseBlock64(uint32_t Adresse){
 	}
 
 	// Erase sector
-	uint32_t DataAdresse = (Adresse - m_MemoryAddress) & 0x00FF0000;
-	if(HAL_OK != (Result = CommandTXData(IS25CMD::CMD_BLOCK_ERASE_64K, (uint8_t*) &DataAdresse, 3))){
+	uint32_t DataAdresse = (Address - m_MemoryAddress) & 0x00FF0000;
+
+	if(HAL_OK != (Result = CommandAddress(IS25CMD::CMD_BLOCK_ERASE_64K, DataAdresse))){
 		return Result;
 	}
 
