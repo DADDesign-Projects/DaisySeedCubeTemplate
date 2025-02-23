@@ -37,17 +37,22 @@ ENTRY(Reset_Handler)
 /* Highest address of the user mode stack */
 _estack = ORIGIN(DTCMRAM) + LENGTH(DTCMRAM);    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_Min_Heap_Size = 0x8000;      /* required amount of heap  */
+_Min_Stack_Size = 0x8000; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
 {
-  RAM_EXEC (xrw)  : ORIGIN = 0x24000000, LENGTH = 1024K
+  FLASH (rx)     : ORIGIN = 0x08000000, LENGTH = 128K
   DTCMRAM (xrw)   : ORIGIN = 0x20000000, LENGTH = 128K
   RAM_D2 (xrw)    : ORIGIN = 0x30000000, LENGTH = 288K
   RAM_D3 (xrw)    : ORIGIN = 0x38000000, LENGTH = 64K
   ITCMRAM (xrw)   : ORIGIN = 0x00000000, LENGTH = 64K
+  RAM_EXEC (xrw)  : ORIGIN = 0x24000000, LENGTH = 448K
+  RAM_NO_CACHE	(xrw) : ORIGIN = 0x24070000, LENGTH = 64K
+  QFLASH (rx)		 : ORIGIN = 0x90000000, LENGTH = 7M
+  QFLASH_LOADER (rx) : ORIGIN = 0x90700000, LENGTH = 1M
+  SDRAM	(xrw)		 : ORIGIN = 0xc0000000, LENGTH = 64M
 }
 
 /* Define output sections */
@@ -137,7 +142,20 @@ SECTIONS
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
   } >DTCMRAM AT> RAM_EXEC
+ 
+ /* DADD RAM_EXEC Section ========================================================== */
+  __lITCM = LOADADDR(.ITCMRAM_Section);
+  .ITCMRAM_Section :
+  {
+      . = ALIGN(4);
+    __sITCM = .;
+    *(.moveITCM)
+    . = ALIGN(4);
+    __eITCM = .;
+  } >ITCMRAM AT> RAM_EXEC
 
+/* ======================================================================== */  
+  
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
@@ -164,7 +182,31 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >DTCMRAM
+  
+  /* DADD Sections ========================================================== */
+  .RAM_NO_CACHE_Section :
+  {
+    . = ALIGN(4);
+    KEEP (*(.RAM_NO_CACHE_Section))
+    . = ALIGN(4);
+  } >RAM_NO_CACHE
+  
+ .QFLASH_Section (NOLOAD):
+  {
+    . = ALIGN(4);
+    KEEP (*(.QFLASH_Section))
+    . = ALIGN(4);
+  } >QFLASH
 
+ .SDRAM_Section (NOLOAD):
+  {
+    . = ALIGN(4);
+    KEEP (*(.SDRAM_Section))
+    . = ALIGN(4);
+  } >SDRAM
+  
+  /* ======================================================================== */  
+    
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {

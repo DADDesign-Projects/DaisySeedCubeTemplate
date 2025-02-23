@@ -57,7 +57,6 @@ SDRAM_HandleTypeDef hsdram1;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
-static void MPU_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_QUADSPI_Init(void);
@@ -69,11 +68,15 @@ static void MX_SAI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// ---------------------------------------------------------------------------
+
+// == DAD =================================================================
+
+extern "C" void DAD_MPU_Config(void);
+
 //QFlash
 Dad::cIS25LPxxx __Flash;
 
-// ------------------------------------------------------------------------
+//------------------------------------------------------------------
 // AudioCallback
 ITCM void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut){
 	for (size_t i = 0; i < AUDIO_BUFFER_SIZE; i++)
@@ -95,7 +98,8 @@ ITCM void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut){
 //         // Time-sensitive code
 //     }
 // ------------------------------------------------------------------------
-
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
 extern uint32_t __sITCM, __eITCM, __lITCM;  // Linker symbols for ITCM section
 
 void Copy_ITCM_Code(void) {
@@ -107,6 +111,8 @@ void Copy_ITCM_Code(void) {
         *pDest++ = *pSrc++;
     }
 }
+#pragma GCC pop_options
+// ===================================================================
 
 /* USER CODE END 0 */
 
@@ -118,16 +124,18 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-	Copy_ITCM_Code();
+
+// ==** DAD **=================================================================
+
+#ifdef USE_RAM
+	SCB->VTOR = 0x24000000;
+#endif
+
+// ===================================================================
+
   /* USER CODE END 1 */
 
-  /* MPU Configuration--------------------------------------------------------*/
-  MPU_Config();
-
   /* MCU Configuration--------------------------------------------------------*/
-
-  /* Configure The Vector Table address */
-  SCB->VTOR = 0x08000000;
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -153,16 +161,16 @@ int main(void)
   MX_FMC_Init();
   MX_SAI1_Init();
   /* USER CODE BEGIN 2 */
+
+// ==** DAD **=================================================================
   __Flash.Init(&hqspi);
-
-  /* Enable I-Cache---------------------------------------------------------*/
+  Copy_ITCM_Code();
+  DAD_MPU_Config();
   SCB_EnableICache();
-
-  /* Enable D-Cache---------------------------------------------------------*/
-  SCB_EnableDCache();
-
+  SCB_EnableICache();
   StartAudio();
 
+// ===================================================================
 
   /* USER CODE END 2 */
 
@@ -173,9 +181,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 
-	  HAL_Delay(300);
+// ==** DAD **=================================================================
+
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	HAL_Delay(300);
+
+// ===================================================================
+
   }
   /* USER CODE END 3 */
 }
@@ -410,76 +423,6 @@ static void MX_FMC_Init(void)
   }
 
   /* USER CODE BEGIN FMC_Init 2 */
-#define SDRAM_MODEREG_BURST_LENGTH_2 ((1 << 0))
-#define SDRAM_MODEREG_BURST_LENGTH_4 ((1 << 1))
-
-#define SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL ((0 << 3))
-
-#define SDRAM_MODEREG_CAS_LATENCY_3 ((1 << 4) | (1 << 5))
-
-#define SDRAM_MODEREG_OPERATING_MODE_STANDARD ()
-
-#define SDRAM_MODEREG_WRITEBURST_MODE_SINGLE ((1 << 9))
-#define SDRAM_MODEREG_WRITEBURST_MODE_PROG_BURST ((0 << 9))
-
-   FMC_SDRAM_CommandTypeDef Command;
-
-   /* Step 3:  Configure a clock configuration enable command */
-   Command.CommandMode            = FMC_SDRAM_CMD_CLK_ENABLE;
-   Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
-   Command.AutoRefreshNumber      = 1;
-   Command.ModeRegisterDefinition = 0;
-
-   /* Send the command */
-   if(HAL_SDRAM_SendCommand(&hsdram1, &Command, 0x1000) != HAL_OK){
-	    Error_Handler();
-   }
-
-   /* Step 4: Insert 100 ms delay */
-   HAL_Delay(100);
-
-   /* Step 5: Configure a PALL (precharge all) command */
-   Command.CommandMode            = FMC_SDRAM_CMD_PALL;
-   Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
-   Command.AutoRefreshNumber      = 1;
-   Command.ModeRegisterDefinition = 0;
-
-   /* Send the command */
-   if(HAL_SDRAM_SendCommand(&hsdram1, &Command, 0x1000) != HAL_OK){
-	    Error_Handler();
-   }
-
-   /* Step 6 : Configure a Auto-Refresh command */
-   Command.CommandMode            = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
-   Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
-   Command.AutoRefreshNumber      = 4;
-   Command.ModeRegisterDefinition = 0;
-
-   /* Send the command */
-   if(HAL_SDRAM_SendCommand(&hsdram1, &Command, 0x1000) != HAL_OK){
-	    Error_Handler();
-   }
-
-   /* Step 7: Program the external memory mode register */
-   uint32_t tmpmrd = 0;
-   tmpmrd = (uint32_t)SDRAM_MODEREG_BURST_LENGTH_4
-            | SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL | SDRAM_MODEREG_CAS_LATENCY_3
-            | SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;
-
-   Command.CommandMode            = FMC_SDRAM_CMD_LOAD_MODE;
-   Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
-   Command.AutoRefreshNumber      = 1;
-   Command.ModeRegisterDefinition = tmpmrd;
-
-   /* Send the command */
-   if(HAL_SDRAM_SendCommand(&hsdram1, &Command, 0x1000) != HAL_OK){
-	    Error_Handler();
-   }
-
-   //HAL_SDRAM_ProgramRefreshRate(hsdram, 0x56A - 20);
-   if(HAL_SDRAM_ProgramRefreshRate(&hsdram1, 0x81A - 20) != HAL_OK){
-	    Error_Handler();
-   }
 
   /* USER CODE END FMC_Init 2 */
 }
@@ -533,111 +476,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-
- /* MPU Configuration */
-
-void MPU_Config(void)
-{
-  MPU_Region_InitTypeDef MPU_InitStruct = {0};
-
-  /* Disables the MPU */
-  HAL_MPU_Disable();
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-  MPU_InitStruct.BaseAddress = 0x0;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_4GB;
-  MPU_InitStruct.SubRegionDisable = 0x87;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
-  MPU_InitStruct.BaseAddress = 0x08000000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_128KB;
-  MPU_InitStruct.SubRegionDisable = 0x0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER2;
-  MPU_InitStruct.BaseAddress = 0x24070800;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_2KB;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER3;
-  MPU_InitStruct.BaseAddress = 0x24071000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_4KB;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER4;
-  MPU_InitStruct.BaseAddress = 0x24072000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_8KB;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER5;
-  MPU_InitStruct.BaseAddress = 0x24074000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_16KB;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER6;
-  MPU_InitStruct.BaseAddress = 0x24078000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_32KB;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER7;
-  MPU_InitStruct.BaseAddress = 0x90000000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_8MB;
-  MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO_URO;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER8;
-  MPU_InitStruct.BaseAddress = 0xC0000000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_64MB;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-  /* Enables the MPU */
-  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
-
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.

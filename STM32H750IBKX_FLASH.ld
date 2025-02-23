@@ -30,33 +30,31 @@
 **
 ****************************************************************************
 */
+
 /* Entry Point */
 ENTRY(Reset_Handler)
-/* Highest address of the user mode stack */
-_estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
-/* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
-/* Start user variables */
 
-/* End user variables */
+/* Highest address of the user mode stack */
+_estack = ORIGIN(RAM_D1) + LENGTH(RAM_D1);    /* end of RAM */
+/* Generate a link error if heap and stack don't fit into RAM */
+_Min_Heap_Size = 0x8000;      /* required amount of heap  */
+_Min_Stack_Size = 0x8000; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
 {
-/* Start MX regions */
-  DTCMRAM	(xrw)	: ORIGIN = 0x20000000, LENGTH = 128K
-  FLASH	(rx)	: ORIGIN = 0x08000000, LENGTH = 128K
-  NO_CACHE_RAM	(xrw)	: ORIGIN = 0x24070800, LENGTH = 62K
-  QFLASH	(rx)	: ORIGIN = 0x90000000, LENGTH = 8192K
-  ITCMRAM	(xrw)	: ORIGIN = 0x00000000, LENGTH = 64K
-  RAM_D3	(xrw)	: ORIGIN = 0x38000000, LENGTH = 64K
-  RAM_D2	(xrw)	: ORIGIN = 0x30000000, LENGTH = 288K
-  RAM	(xrw)	: ORIGIN = 0x24000000, LENGTH = 450K
-  SDRAM	(xrw)	: ORIGIN = 0xc0000000, LENGTH = 65536K
-/* End MX regions */
-/*removed by MX default:   RAM_D1	(xrw)	: ORIGIN = 0x24000000, LENGTH = 512K */
+  FLASH (rx)     : ORIGIN = 0x08000000, LENGTH = 128K
+  DTCMRAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
+  RAM_D1 (xrw)   : ORIGIN = 0x24000000, LENGTH = 448K
+  RAM_D2 (xrw)   : ORIGIN = 0x30000000, LENGTH = 288K
+  RAM_D3 (xrw)   : ORIGIN = 0x38000000, LENGTH = 64K
+  ITCMRAM (xrw)  : ORIGIN = 0x00000000, LENGTH = 64K
+  RAM_NO_CACHE	(xrw) : ORIGIN = 0x24070000, LENGTH = 64K
+  QFLASH (rx)		 : ORIGIN = 0x90000000, LENGTH = 7M
+  QFLASH_LOADER (rx) : ORIGIN = 0x90700000, LENGTH = 1M
+  SDRAM	(xrw)		 : ORIGIN = 0xc0000000, LENGTH = 64M
 }
+
 /* Define output sections */
 SECTIONS
 {
@@ -67,6 +65,7 @@ SECTIONS
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
   } >FLASH
+
   /* The program code and other data goes into FLASH */
   .text :
   {
@@ -76,11 +75,14 @@ SECTIONS
     *(.glue_7)         /* glue arm to thumb code */
     *(.glue_7t)        /* glue thumb to arm code */
     *(.eh_frame)
+
     KEEP (*(.init))
     KEEP (*(.fini))
+
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
+
   /* Constant data goes into FLASH */
   .rodata :
   {
@@ -89,6 +91,7 @@ SECTIONS
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
   } >FLASH
+
   .ARM.extab (READONLY) : /* The READONLY keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {
     *(.ARM.extab* .gnu.linkonce.armextab.*)
@@ -99,12 +102,14 @@ SECTIONS
     *(.ARM.exidx*)
     __exidx_end = .;
   } >FLASH
+
   .preinit_array (READONLY) : /* The READONLY keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
   } >FLASH
+
   .init_array (READONLY) : /* The READONLY keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {
     PROVIDE_HIDDEN (__init_array_start = .);
@@ -112,6 +117,7 @@ SECTIONS
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
   } >FLASH
+
   .fini_array (READONLY) : /* The READONLY keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
@@ -119,8 +125,10 @@ SECTIONS
     KEEP (*(.fini_array*))
     PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH
+
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
+
   /* Initialized data sections goes into RAM, load LMA copy after code */
   .data :
   {
@@ -130,9 +138,25 @@ SECTIONS
     *(.data*)          /* .data* sections */
     *(.RamFunc)        /* .RamFunc sections */
     *(.RamFunc*)       /* .RamFunc* sections */
+
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM AT> FLASH
+  } >RAM_D1 AT> FLASH
+  
+  /* DADD FLASH Section ========================================================== */
+   __lITCM = LOADADDR(.ITCMRAM_Section);
+  .ITCMRAM_Section :
+  {
+      . = ALIGN(4);
+    __sITCM = .;
+    *(.moveITCM)
+    . = ALIGN(4);
+    __eITCM = .;
+  } >ITCMRAM AT> FLASH
+
+  
+  /*  ============================================================================ */  
+ 
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
@@ -143,10 +167,12 @@ SECTIONS
     *(.bss)
     *(.bss*)
     *(COMMON)
+
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } >RAM
+  } >RAM_D1
+
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :
   {
@@ -156,7 +182,32 @@ SECTIONS
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
-  } >RAM
+  } >RAM_D1
+
+ /* DADD Sections ========================================================== */  
+  .RAM_NO_CACHE_Section :
+  {
+    . = ALIGN(4);
+    KEEP (*(.RAM_NO_CACHE_Section))
+    . = ALIGN(4);
+  } >RAM_NO_CACHE
+  
+ .QFLASH_Section (NOLOAD):
+  {
+    . = ALIGN(4);
+    KEEP (*(.QFLASH_Section))
+    . = ALIGN(4);
+  } >QFLASH
+
+ .SDRAM_Section (NOLOAD):
+  {
+    . = ALIGN(4);
+    KEEP (*(.SDRAM_Section))
+    . = ALIGN(4);
+  } >SDRAM
+ /* ======================================================================== */  
+  
+  
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {
@@ -164,59 +215,8 @@ SECTIONS
     libm.a ( * )
     libgcc.a ( * )
   }
-  .ARM.attributes 0 : { *(.ARM.attributes) }
- /*  Unitialized DTCMRAM section into "DTCMRAM" DTCMRAM type memory [MMT section] */
- .DTCMRAM_Section :
-  {
-    . = ALIGN(4);
-    KEEP (*(.DTCMRAM_Section))
-    . = ALIGN(4);
-  } >DTCMRAM
- /*  Unitialized ITCMRAM section into "ITCMRAM" ITCMRAM type memory [MMT section] */
- .ITCMRAM_Section :
-  {
-    __sITCM = .;
-    . = ALIGN(4);
-    KEEP (*(.ITCMRAM_Section))
-    . = ALIGN(4);
-    __eITCM = .;
-  } >ITCMRAM AT> FLASH
-    __lITCM = LOADADDR(.ITCMRAM_Section);
-  
- /*  Unitialized RAM_D3 section into "RAM_D3" RAM_D3 type memory [MMT section] */
- .RAM_D3_Section :
-  {
-    . = ALIGN(4);
-    KEEP (*(.RAM_D3_Section))
-    . = ALIGN(4);
-  } >RAM_D3
- /*  Unitialized RAM_D2 section into "RAM_D2" RAM_D2 type memory [MMT section] */
- .RAM_D2_Section :
-  {
-    . = ALIGN(4);
-    KEEP (*(.RAM_D2_Section))
-    . = ALIGN(4);
-  } >RAM_D2
- /*  Unitialized QFLASH section into "QFLASH" QFLASH type memory [MMT section] */
- .QFLASH_Section (NOLOAD):
-  {
-    . = ALIGN(4);
-    KEEP (*(.QFLASH_Section))
-    . = ALIGN(4);
-  } >QFLASH
- /*  Unitialized SDRAM section into "SDRAM" SDRAM type memory [MMT section] */
- .SDRAM_Section (NOLOAD):
-  {
-    . = ALIGN(4);
-    KEEP (*(.SDRAM_Section))
-    . = ALIGN(4);
-  } >SDRAM
- /*  Unitialized NO_CACHE_RAM section into "NO_CACHE_RAM" NO_CACHE_RAM type memory [MMT section] */
- .NO_CACHE_RAM_Section :
-  {
-    . = ALIGN(4);
-    KEEP (*(.NO_CACHE_RAM_Section))
-    . = ALIGN(4);
-  } >NO_CACHE_RAM
 
+  .ARM.attributes 0 : { *(.ARM.attributes) }
 }
+
+
