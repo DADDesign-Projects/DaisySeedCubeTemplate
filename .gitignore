@@ -3,3 +3,4 @@
 /.settings
 DaisySeedGeneric Debug.launch
 .settings/stm32cubeide.project.prefs
+DaisySeedCubeTemplate.launch

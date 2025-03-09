@@ -13,13 +13,6 @@ extern SAI_HandleTypeDef hsai_BlockB1;
 #define SAI_HALF_BUFFER_SIZE  (AUDIO_BUFFER_SIZE * 2) // Stereo
 #define SAI_BUFFER_SIZE 	  (AUDIO_BUFFER_SIZE * 4)
 
-// Convert int32_t to float (assuming 24-bit audio data in 32-bit container)
-#define int32ToFloat(sample) static_cast<float>(0xFFFFFF & sample) / static_cast<float>(0x7FFFFF)
-
-// Convert float to int32_t (assuming 24-bit audio data in 32-bit container)
-#define floatToInt32(sample) static_cast<int32_t>(sample * static_cast<float>(0x7FFFFF))
-
-
 // ------------------------------------------------------------------------
 // AudioCallback
 // ------------------------------------------------------------------------
@@ -37,6 +30,19 @@ NO_CACHE_RAM int32_t txBuffer[SAI_BUFFER_SIZE];
 // ------------------------------------------------------------------------
 // Convert int32_t buffer to float AudioBuffer
 // ------------------------------------------------------------------------
+inline float int32ToFloat(int32_t sample) {
+    // Check if the sign bit (bit 23) is set
+    if (sample & 0x00800000) {
+        // Extend the sign bit to 32-bit (two’s complement format)
+        sample |= 0xFF000000;
+    } else {
+        // Ensure only the lower 24 bits are used
+        sample &= 0x00FFFFFF;
+    }
+    // Normalize to the range [-1.0, 1.0] by dividing by 2^23
+    return static_cast<float>(sample) / 8388608.0f;
+}
+
 ITCM void ConvertToAudioBuffer( int32_t* intBuf, AudioBuffer* floatBuf) {
     for (size_t i = 0; i < AUDIO_BUFFER_SIZE; i++) {
         floatBuf[i].Left = int32ToFloat(intBuf[i * 2]);
@@ -47,6 +53,18 @@ ITCM void ConvertToAudioBuffer( int32_t* intBuf, AudioBuffer* floatBuf) {
 // ------------------------------------------------------------------------
 // Convert float AudioBuffer to int32_t buffer
 // ------------------------------------------------------------------------
+inline int32_t floatToInt32(float sample) {
+    // Clamp the value to the valid range [-1.0, 1.0]
+    if (sample > 1.0f) sample = 1.0f;
+    if (sample < -1.0f) sample = -1.0f;
+
+    // Convert to a signed 24-bit integer (scale by 2^23)
+    int32_t intSample = static_cast<int32_t>(sample * 8388608.0f);
+
+    // Ensure the result is in a valid 24-bit format
+    return intSample & 0xFFFFFF;
+}
+
 ITCM void ConvertFromAudioBuffer(AudioBuffer* floatBuf, int32_t* intBuf) {
     for (size_t i = 0; i < AUDIO_BUFFER_SIZE; i++) {
         intBuf[i * 2] = floatToInt32(floatBuf[i].Left);
