@@ -330,6 +330,7 @@ static void HAL_FMC_MspInit(void){
   PG8   ------> FMC_SDCLK
   PF3   ------> FMC_A3
   PF4   ------> FMC_A4
+  PH5   ------> FMC_SDNWE
   PF5   ------> FMC_A5
   PH12   ------> FMC_D20
   PG5   ------> FMC_BA1
@@ -338,7 +339,6 @@ static void HAL_FMC_MspInit(void){
   PH10   ------> FMC_D18
   PD15   ------> FMC_D1
   PG2   ------> FMC_A12
-  PC0   ------> FMC_SDNWE
   PG1   ------> FMC_A11
   PH8   ------> FMC_D16
   PH9   ------> FMC_D17
@@ -397,8 +397,8 @@ static void HAL_FMC_MspInit(void){
   HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pin = GPIO_PIN_15|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_2
-                          |GPIO_PIN_3|GPIO_PIN_12|GPIO_PIN_11|GPIO_PIN_10
-                          |GPIO_PIN_8|GPIO_PIN_9;
+                          |GPIO_PIN_3|GPIO_PIN_5|GPIO_PIN_12|GPIO_PIN_11
+                          |GPIO_PIN_10|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -413,13 +413,6 @@ static void HAL_FMC_MspInit(void){
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /* Peripheral interrupt init */
   HAL_NVIC_SetPriority(FMC_IRQn, 0, 0);
@@ -479,6 +472,7 @@ static void HAL_FMC_MspDeInit(void){
   PG8   ------> FMC_SDCLK
   PF3   ------> FMC_A3
   PF4   ------> FMC_A4
+  PH5   ------> FMC_SDNWE
   PF5   ------> FMC_A5
   PH12   ------> FMC_D20
   PG5   ------> FMC_BA1
@@ -487,7 +481,6 @@ static void HAL_FMC_MspDeInit(void){
   PH10   ------> FMC_D18
   PD15   ------> FMC_D1
   PG2   ------> FMC_A12
-  PC0   ------> FMC_SDNWE
   PG1   ------> FMC_A11
   PH8   ------> FMC_D16
   PH9   ------> FMC_D17
@@ -526,14 +519,12 @@ static void HAL_FMC_MspDeInit(void){
                           |GPIO_PIN_10|GPIO_PIN_0);
 
   HAL_GPIO_DeInit(GPIOH, GPIO_PIN_15|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_2
-                          |GPIO_PIN_3|GPIO_PIN_12|GPIO_PIN_11|GPIO_PIN_10
-                          |GPIO_PIN_8|GPIO_PIN_9);
+                          |GPIO_PIN_3|GPIO_PIN_5|GPIO_PIN_12|GPIO_PIN_11
+                          |GPIO_PIN_10|GPIO_PIN_8|GPIO_PIN_9);
 
   HAL_GPIO_DeInit(GPIOF, GPIO_PIN_0|GPIO_PIN_2|GPIO_PIN_1|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_13|GPIO_PIN_12
                           |GPIO_PIN_15|GPIO_PIN_11|GPIO_PIN_14);
-
-  HAL_GPIO_DeInit(GPIOC, GPIO_PIN_0);
 
   /* Peripheral interrupt DeInit */
   HAL_NVIC_DisableIRQ(FMC_IRQn);
