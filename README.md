@@ -7,7 +7,7 @@ This project is developed by **DAD Design**.
 ## License
 This project is licensed under the [MIT License](LICENSE).
 ## Features
-This project provides a basic framework for programming the DaisySeed board using **STM32CubeIDE**. It includes a complete configuration of essential hardware components, such as:
+This project provides a basic framework for programming the DaisySeed board (Rev 5 & Rev 7) using **STM32CubeIDE**. It includes a complete configuration of essential hardware components, such as:
 - Audio codec (initialization and audio interface management)
 - SDRAM memory (configuration and access)
 - QSPI flash memory (erase, write, and read)
