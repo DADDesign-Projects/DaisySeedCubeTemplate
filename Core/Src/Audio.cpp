@@ -13,6 +13,11 @@ extern SAI_HandleTypeDef hsai_BlockB1;
 #define SAI_HALF_BUFFER_SIZE  (AUDIO_BUFFER_SIZE * 2) // Stereo
 #define SAI_BUFFER_SIZE 	  (AUDIO_BUFFER_SIZE * 4)
 
+extern enum HardRev{
+	Rev5,
+	Rev7
+} __HardRev;
+
 // ------------------------------------------------------------------------
 // AudioCallback
 // ------------------------------------------------------------------------
@@ -139,18 +144,21 @@ HAL_StatusTypeDef StartAudio(){
 		rxBuffer[Index] = 0;
 		txBuffer[Index] = 0;
 	}
-	// Reset CODEC
-	HAL_GPIO_WritePin(RESET_CODEC_GPIO_Port, RESET_CODEC_Pin, GPIO_PIN_SET);
-	HAL_Delay(1);
-	HAL_GPIO_WritePin(RESET_CODEC_GPIO_Port, RESET_CODEC_Pin, GPIO_PIN_RESET);
-	HAL_Delay(1);
-	HAL_GPIO_WritePin(RESET_CODEC_GPIO_Port, RESET_CODEC_Pin, GPIO_PIN_SET);
-	HAL_Delay(1);
 
-	if(HAL_OK != (Result = HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t*) rxBuffer, SAI_BUFFER_SIZE))){
-		return Result;
+	if(Rev5 == __HardRev){
+		if(HAL_OK != (Result = HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t*) rxBuffer, SAI_BUFFER_SIZE))){
+			return Result;
+		}
+
+		return HAL_SAI_Transmit_DMA(&hsai_BlockB1, (uint8_t*) txBuffer, SAI_BUFFER_SIZE);
+	}else if(Rev7 == __HardRev){
+		if(HAL_OK != (Result = HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t*) rxBuffer, SAI_BUFFER_SIZE))){
+			return Result;
+		}
+
+		return HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*) txBuffer, SAI_BUFFER_SIZE);
+	}else{
+		return HAL_ERROR;
 	}
-
-	return HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*) txBuffer, SAI_BUFFER_SIZE);
 }
 

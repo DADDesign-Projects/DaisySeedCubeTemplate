@@ -56,16 +56,19 @@ void MX_DMA_Init(void);
 void MX_QUADSPI_Init(void);
 void MX_FMC_Init(void);
 void MX_SAI1_Init(void);
+void MX_I2C2_Init(void);
 
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define Rev7_Pin GPIO_PIN_5
+#define Rev7_GPIO_Port GPIOD
+#define Rev5_Pin GPIO_PIN_3
+#define Rev5_GPIO_Port GPIOD
 #define LED_Pin GPIO_PIN_7
 #define LED_GPIO_Port GPIOC
-#define RESET_CODEC_Pin GPIO_PIN_11
-#define RESET_CODEC_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 /* Sections ---------------------------------------------------------*/
@@ -76,11 +79,13 @@ void MX_SAI1_Init(void);
 
 /* Audio ---------------------------------------------------------*/
 #define AUDIO_BUFFER_SIZE 4
+#define SAMPLING_RATE 48000.0f
 struct AudioBuffer{
 	float Right;
 	float Left;
 };
 extern HAL_StatusTypeDef StartAudio();
+
 
 /* USER CODE END Private defines */
 

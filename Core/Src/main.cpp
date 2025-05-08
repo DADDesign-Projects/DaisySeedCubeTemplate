@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cIS25LPxxx.h"
+#include "cWM8731.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,6 +41,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
+I2C_HandleTypeDef hi2c2;
 
 QSPI_HandleTypeDef hqspi;
 
@@ -71,8 +74,20 @@ extern "C" void DAD_MPU_Config(void);
 //QFlash
 Dad::cIS25LPxxx __Flash;
 
+// Revision
+enum HardRev{
+	Rev5,
+	Rev7
+}__HardRev;
+
+// WM8731 management for Rev5
+Dad::cWM8731  __WM8731;
+
 //------------------------------------------------------------------
 // AudioCallback
+uint32_t __CT=0; 			// Cycle counter
+							// - Used in main loop to blink an activity LED
+ 	 	 	 	 	 	 	// - The LED blink rate indicates proper callback execution
 ITCM void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut){
 	for (size_t i = 0; i < AUDIO_BUFFER_SIZE; i++)
 	{
@@ -81,6 +96,9 @@ ITCM void AudioCallback(AudioBuffer *pIn, AudioBuffer *pOut){
 		pOut++;
 		pIn++;
 	}
+
+    // Increment cycle counter for visual feedback:
+    __CT++;
 }
 
 // ------------------------------------------------------------------------
@@ -107,6 +125,52 @@ void Copy_ITCM_Code(void) {
     }
 }
 #pragma GCC pop_options
+
+// ------------------------------------------------------------------------
+// Specific initialization for hardware revision 5:
+// input and output signals are inverted compared to revision 7."
+extern "C" void HAL_SAIRev5_MspInit(SAI_HandleTypeDef* hsai);
+void MX_SAI1Rev5_Init(void)
+{
+  HAL_SAI_RegisterCallback(&hsai_BlockA1, HAL_SAI_MSPINIT_CB_ID,HAL_SAIRev5_MspInit);
+  HAL_SAI_RegisterCallback(&hsai_BlockB1, HAL_SAI_MSPINIT_CB_ID,HAL_SAIRev5_MspInit);
+
+  hsai_BlockA1.Instance = SAI1_Block_A;
+  // ===============================================
+  // Dad Change TX->RX
+  hsai_BlockA1.Init.AudioMode = SAI_MODEMASTER_RX;
+  hsai_BlockA1.Init.Synchro = SAI_ASYNCHRONOUS;
+  hsai_BlockA1.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
+  hsai_BlockA1.Init.NoDivider = SAI_MCK_OVERSAMPLING_DISABLE;
+  hsai_BlockA1.Init.MckOverSampling = SAI_MCK_OVERSAMPLING_DISABLE;
+  hsai_BlockA1.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_EMPTY;
+  hsai_BlockA1.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_48K;
+  hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
+  hsai_BlockA1.Init.MonoStereoMode = SAI_STEREOMODE;
+  hsai_BlockA1.Init.CompandingMode = SAI_NOCOMPANDING;
+  hsai_BlockA1.Init.TriState = SAI_OUTPUT_NOTRELEASED;
+  if (HAL_SAI_InitProtocol(&hsai_BlockA1, SAI_I2S_MSBJUSTIFIED, SAI_PROTOCOL_DATASIZE_24BIT, 2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  hsai_BlockB1.Instance = SAI1_Block_B;
+  // ===============================================
+  // Dad Change RC->TX
+  hsai_BlockB1.Init.AudioMode = SAI_MODESLAVE_TX;
+  hsai_BlockB1.Init.Synchro = SAI_SYNCHRONOUS;
+  hsai_BlockB1.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
+  hsai_BlockB1.Init.MckOverSampling = SAI_MCK_OVERSAMPLING_DISABLE;
+  hsai_BlockB1.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_EMPTY;
+  hsai_BlockB1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
+  hsai_BlockB1.Init.MonoStereoMode = SAI_STEREOMODE;
+  hsai_BlockB1.Init.CompandingMode = SAI_NOCOMPANDING;
+  hsai_BlockB1.Init.TriState = SAI_OUTPUT_NOTRELEASED;
+  if (HAL_SAI_InitProtocol(&hsai_BlockB1, SAI_I2S_MSBJUSTIFIED, SAI_PROTOCOL_DATASIZE_24BIT, 2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
 // ===================================================================
 
 /* USER CODE END 0 */
@@ -154,7 +218,6 @@ int main(void)
   MX_DMA_Init();
   MX_QUADSPI_Init();
   MX_FMC_Init();
-  MX_SAI1_Init();
   /* USER CODE BEGIN 2 */
 
 // ==** DAD **=================================================================
@@ -162,7 +225,32 @@ int main(void)
   Copy_ITCM_Code();
   DAD_MPU_Config();
   SCB_EnableICache();
-  SCB_EnableICache();
+  SCB_EnableDCache();
+
+  // Revision configuration
+  MX_DMA_Init();
+  if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(Rev5_GPIO_Port, Rev5_Pin)){
+	  __HardRev = Rev5;
+	  MX_I2C2_Init();
+	  MX_SAI1Rev5_Init();
+	  __WM8731.Initialize(&hi2c2);
+  }else if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(Rev7_GPIO_Port, Rev7_Pin)){
+	  __HardRev = Rev7;
+	  MX_SAI1_Init();
+	  GPIO_InitTypeDef GPIO_InitStruct = {0};
+	  GPIO_InitStruct.Pin = GPIO_PIN_11;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, GPIO_PIN_RESET);
+  }else{
+	  // Revision not supported
+	  while(1){
+		    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+			HAL_Delay(100);
+	  }
+  }
   StartAudio();
 
 // ===================================================================
@@ -179,8 +267,13 @@ int main(void)
 
 // ==** DAD **=================================================================
 
-    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-	HAL_Delay(300);
+      // LED blinking: indicates that the audio loop is operating correctly.
+      if(__CT >= (uint32_t) (((float)SAMPLING_RATE / 4.0f)  * 0.5f)){
+    	  __CT =0;
+    	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+      }
+
+	  HAL_Delay(100);
 
 // ===================================================================
 
@@ -270,6 +363,54 @@ void PeriphCommonClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C2 Initialization Function
+  * @param None
+  * @retval None
+  */
+void MX_I2C2_Init(void)
+{
+
+  /* USER CODE BEGIN I2C2_Init 0 */
+
+  /* USER CODE END I2C2_Init 0 */
+
+  /* USER CODE BEGIN I2C2_Init 1 */
+
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.Timing = 0x307075B1;
+  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c2, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c2, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C2_Init 2 */
+
+  /* USER CODE END I2C2_Init 2 */
+
 }
 
 /**
@@ -449,8 +590,11 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(RESET_CODEC_GPIO_Port, RESET_CODEC_Pin, GPIO_PIN_RESET);
+  /*Configure GPIO pins : Rev7_Pin Rev5_Pin */
+  GPIO_InitStruct.Pin = Rev7_Pin|Rev5_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LED_Pin */
   GPIO_InitStruct.Pin = LED_Pin;
@@ -458,13 +602,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : RESET_CODEC_Pin */
-  GPIO_InitStruct.Pin = RESET_CODEC_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(RESET_CODEC_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* USER CODE END MX_GPIO_Init_2 */
